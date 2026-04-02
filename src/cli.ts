@@ -141,4 +141,33 @@ program
     }
   });
 
+program
+  .command("serve")
+  .description("Local dashboard UI (127.0.0.1): GET /api/report, POST /api/run, GET /whitebox-report.json")
+  .option("-p, --port <n>", "HTTP port", "3847")
+  .option("-c, --config <path>", "Default config for POST /api/run", "whitebox.config.json")
+  .option("-o, --report <path>", "Report JSON path", "whitebox-report.json")
+  .action(async (opts: { port: string; config: string; report: string }) => {
+    const { startServe } = await import("./serve.js");
+    const port = Number(opts.port);
+    if (!Number.isFinite(port) || port < 1 || port > 65535) {
+      process.stderr.write("Invalid --port\n");
+      process.exitCode = 1;
+      return;
+    }
+    await startServe({
+      port,
+      configPath: path.resolve(opts.config),
+      reportPath: path.resolve(opts.report),
+    });
+  });
+
+program
+  .command("mcp")
+  .description("MCP server on stdio (Cursor: Settings → MCP)")
+  .action(async () => {
+    const { runMcpServer } = await import("./mcp.js");
+    await runMcpServer();
+  });
+
 await program.parseAsync(process.argv);

@@ -66,6 +66,16 @@ Treat model output as a **draft**—review and run tests before merging.
 
 Template suggestions come from **`review`**; richer drafts come from **`review --ai`** when `OPENAI_API_KEY` is set. Always **review** model output before trusting it.
 
+## Local dashboard (UI)
+
+After **`npm run verify`** (or any run that writes `whitebox-report.json`), start the static UI:
+
+```bash
+npm run serve
+```
+
+Open **http://127.0.0.1:3847/** (Simple Browser in Cursor works). The page loads **`GET /api/report`**, falls back to **`GET /whitebox-report.json`**, then embedded mock data if the server is not running. **Run verify** / **Retest** call **`POST /api/run`** (same defaults as CLI: `whitebox.config.json` → `whitebox-report.json`). Optional: **`npm run mcp`** / **`node dist/cli.js mcp`** for Cursor MCP (see `.cursor/mcp.json`).
+
 ## CLI
 
 ```bash
@@ -82,6 +92,9 @@ node dist/cli.js audit --root examples/todo-app --fail
 node dist/cli.js coverage --file examples/todo-app/coverage/coverage-summary.json --min-lines 70
 node dist/cli.js scaffold-tests --root examples/todo-app
 node dist/cli.js scaffold-tests --root examples/todo-app --write
+
+npm run serve
+# or: node dist/cli.js serve --port 3847
 ```
 
 Exit code `0` only if every gate passes.
@@ -97,5 +110,6 @@ Exit code `0` only if every gate passes.
 ## Project layout
 
 - `src/` — verifier engine + CLI
+- `ui/index.html` — single-file dashboard for `VerifyReport` JSON
 - `examples/todo-app/` — tiny sample (`sum`, `greet`) whose tests + coverage are checked from the root config
 - `whitebox.config.json` — root gates for this repo

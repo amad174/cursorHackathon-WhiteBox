@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Whitebox · Verification</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --ok: #3fb950;
+        --fail: #f85149;
+        --warn: #d29922;
+        --accent: #58a6ff;
+        --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 1rem;
+        justify-content: space-between;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .badge.pass {
+        background: rgba(63, 185, 80, 0.15);
+        color: var(--ok);
+      }
+      .badge.fail {
+        background: rgba(248, 81, 73, 0.15);
+        color: var(--fail);
+      }
+      .badge.pending {
+        background: rgba(139, 148, 158, 0.15);
+        color: var(--muted);
+      }
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text);
+        padding: 0.45rem 0.85rem;
+        border-radius: 6px;
+      }
+      button:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      button.primary:hover:not(:disabled) {
+        filter: brightness(1.08);
+        color: #fff;
+      }
+      main {
+        padding: 1.25rem 1.5rem 2.5rem;
+        max-width: 920px;
+        margin: 0 auto;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      .overview {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 1rem 1.1rem;
+        background: var(--surface);
+        margin-bottom: 1rem;
+      }
+      .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 0.75rem 1rem;
+        margin-top: 0.65rem;
+      }
+      .overview-grid strong {
+        display: block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .overview-grid span {
+        font-size: 1.05rem;
+      }
+      details.summary-panel {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        margin-bottom: 1rem;
+        overflow: hidden;
+      }
+      details.summary-panel > summary {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        font-weight: 600;
+        user-select: none;
+        list-style: none;
+      }
+      details.summary-panel > summary::-webkit-details-marker {
+        display: none;
+      }
+      details.summary-panel > summary::before {
+        content: "▸ ";
+        color: var(--muted);
+      }
+      details.summary-panel[open] > summary::before {
+        content: "▾ ";
+      }
+      .summary-body {
+        padding: 0 1rem 1rem;
+        border-top: 1px solid var(--border);
+        font-size: 0.88rem;
+      }
+      .summary-body h4 {
+        margin: 0.85rem 0 0.35rem;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+      }
+      .summary-body h4:first-child {
+        margin-top: 0.5rem;
+      }
+      .summary-body ul {
+        margin: 0;
+        padding-left: 1.15rem;
+      }
+      .summary-body li {
+        margin: 0.2rem 0;
+      }
+      .sev {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+        margin-right: 0.35rem;
+        vertical-align: middle;
+      }
+      .sev-high {
+        background: rgba(248, 81, 73, 0.2);
+        color: var(--fail);
+      }
+      .sev-med {
+        background: rgba(210, 153, 34, 0.2);
+        color: var(--warn);
+      }
+      .sev-low {
+        background: rgba(139, 148, 158, 0.2);
+        color: var(--muted);
+      }
+      .section-title {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0 0 0.6rem;
+        font-weight: 600;
+      }
+      .gate {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 0.65rem;
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .gate.gate-fail {
+        border-color: rgba(248, 81, 73, 0.55);
+        box-shadow: 0 0 0 1px rgba(248, 81, 73, 0.12);
+      }
+      .gate-head {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.65rem 0.85rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      .gate-head:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .mark {
+        font-weight: 700;
+        width: 1.25rem;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .mark.ok {
+        color: var(--ok);
+      }
+      .mark.bad {
+        color: var(--fail);
+      }
+      .gate-title {
+        flex: 1;
+        font-weight: 500;
+        min-width: 0;
+      }
+      .gate-type {
+        font-size: 0.72rem;
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+      .gate-ms {
+        font-size: 0.75rem;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .evidence-count {
+        font-size: 0.7rem;
+        color: var(--fail);
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      .gate-body {
+        display: none;
+        border-top: 1px solid var(--border);
+        padding: 0.75rem 0.85rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+        max-height: 360px;
+        overflow: auto;
+      }
+      .gate.open .gate-body {
+        display: block;
+      }
+      .pre-block {
+        font-family: var(--mono);
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0.5rem 0 0;
+        padding: 0.5rem 0.6rem;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 6px;
+        font-size: 0.72rem;
+      }
+      .pre-label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin-top: 0.65rem;
+      }
+      .pre-label:first-child {
+        margin-top: 0;
+      }
+      table.evidence {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.75rem;
+        margin-top: 0.35rem;
+      }
+      table.evidence th,
+      table.evidence td {
+        border: 1px solid var(--border);
+        padding: 0.35rem 0.5rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      table.evidence th {
+        background: rgba(0, 0, 0, 0.2);
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .err-banner {
+        background: rgba(248, 81, 73, 0.1);
+        border: 1px solid var(--fail);
+        color: var(--fail);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+      }
+      .hint {
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      .hint code {
+        font-family: var(--mono);
+        font-size: 0.78em;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Whitebox</h1>
+        <div class="meta" id="subtitle">Quality gates · verification report</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap">
+        <span class="badge pending" id="status">Loading</span>
+        <div class="actions">
+          <button type="button" class="primary" id="btn-run" disabled>Run verify</button>
+          <button type="button" id="btn-retest" disabled>Retest</button>
+          <button type="button" id="btn-refresh" disabled>Refresh</button>
+        </div>
+      </div>
+    </header>
+    <main>
+      <div id="error" class="err-banner" style="display: none"></div>
+      <div id="data-source" class="meta" style="margin-bottom: 0.75rem"></div>
+
+      <section class="overview" id="overview" style="display: none">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem">
+          <span id="overview-status" class="badge pending">—</span>
+          <span class="meta" id="overview-time"></span>
+        </div>
+        <div class="overview-grid">
+          <div>
+            <strong>Gates passed</strong>
+            <span id="stat-pass">—</span>
+          </div>
+          <div>
+            <strong>Gates failed</strong>
+            <span id="stat-fail">—</span>
+          </div>
+          <div>
+            <strong>Config</strong>
+            <span id="stat-config" style="font-size: 0.8rem; word-break: break-all">—</span>
+          </div>
+        </div>
+      </section>
+
+      <details class="summary-panel" open id="summary-details">
+        <summary>Summary</summary>
+        <div class="summary-body" id="nl-summary">
+          <p class="meta">Load a report to see a structured summary.</p>
+        </div>
+      </details>
+
+      <p class="section-title">Gates</p>
+      <div id="gates"></div>
+
+      <p class="hint">
+        <strong>Server:</strong> run <code>npm run serve</code> (or <code>node dist/cli.js serve</code>) so
+        <code>/api/report</code> and <code>/api/run</code> work. Without the server, the UI uses mock data or tries
+        <code>/whitebox-report.json</code>.
+      </p>
+    </main>
+    <script>
+      (function () {
+        const MOCK_REPORT = {
+          schema: "whitebox.verify.v1",
+          createdAt: new Date().toISOString(),
+          configPath: "(mock) whitebox.config.json",
+          ok: false,
+          gates: [
+            {
+              id: "types",
+              label: "Typecheck (no emit)",
+              type: "command",
+              ok: true,
+              durationMs: 420,
+              stdout: "> tsc --noEmit\n",
+            },
+            {
+              id: "example",
+              label: "Example gate (mock failure)",
+              type: "command",
+              ok: false,
+              durationMs: 120,
+              detail: "Exit code 1",
+              stderr: "AssertionError: expected 3 to be 4",
+              testEvidence: {
+                framework: "vitest-json",
+                totalPassed: 2,
+                totalFailed: 1,
+                failedTests: [
+                  {
+                    fullName: "sum adds numbers",
+                    file: "src/sum.test.ts",
+                    messages: ["expected 3 to be 4"],
+                  },
+                ],
+              },
+            },
+          ],
+        };
+
+        const $ = (id) => document.getElementById(id);
+
+        function gateLabel(g) {
+          return g.label || g.id;
+        }
+
+        function gateSeverity(g) {
+          if (g.ok) return null;
+          if (g.type === "fileExists" || g.type === "fileMatches") return "LOW";
+          const blob = [g.label, g.id, g.detail || "", g.stderr || "", g.stdout || ""].join(" ");
+          if (/coverage|below threshold|min-lines/i.test(blob)) return "MEDIUM";
+          return "HIGH";
+        }
+
+        function overallSeverity(failedGates) {
+          if (failedGates.length === 0) return "none";
+          const ranks = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+          let max = 0;
+          let label = "LOW";
+          for (const g of failedGates) {
+            const s = gateSeverity(g);
+            if (s && ranks[s] > max) {
+              max = ranks[s];
+              label = s;
+            }
+          }
+          return label;
+        }
+
+        function nextSteps(report) {
+          const failed = (report.gates || []).filter((g) => !g.ok);
+          const steps = [];
+          for (const g of failed) {
+            if (g.testEvidence && g.testEvidence.failedTests && g.testEvidence.failedTests.length) {
+              steps.push("Fix failing tests listed under “" + gateLabel(g) + "”, then run verify again.");
+              continue;
+            }
+            if (g.type === "command") {
+              steps.push("Fix the command failure for “" + gateLabel(g) + "” (see stderr below), then re-run.");
+            } else if (g.type === "fileExists") {
+              steps.push("Add or restore the missing file referenced by “" + gateLabel(g) + "”.");
+            } else if (g.type === "fileMatches") {
+              steps.push("Update the file so it matches the required pattern for “" + gateLabel(g) + "”.");
+            }
+          }
+          if (failed.some((g) => /coverage|min-lines/i.test([g.label, g.id, g.detail, g.stderr].join(" ")))) {
+            steps.push("Raise line coverage or adjust the coverage gate threshold if appropriate.");
+          }
+          if (steps.length === 0 && !report.ok) steps.push("Review failed gates and fix underlying issues.");
+          return [...new Set(steps)];
+        }
+
+        function buildSummaryHtml(report) {
+          const gates = report.gates || [];
+          const passed = gates.filter((g) => g.ok);
+          const failed = gates.filter((g) => !g.ok);
+          const testedLines = gates.map((g) => {
+            const name = gateLabel(g);
+            const kind =
+              g.type === "command"
+                ? "shell command"
+                : g.type === "fileExists"
+                  ? "file exists"
+                  : g.type === "fileMatches"
+                    ? "file matches pattern"
+                    : g.type;
+            return "<li><strong>" + escapeHtml(name) + "</strong> — " + escapeHtml(kind) + "</li>";
+          });
+
+          const passedLines = passed.map((g) => "<li>" + escapeHtml(gateLabel(g)) + "</li>").join("");
+          const failedLines = failed
+            .map((g) => {
+              const sev = gateSeverity(g);
+              const badge =
+                sev === "HIGH"
+                  ? '<span class="sev sev-high">HIGH</span>'
+                  : sev === "MEDIUM"
+                    ? '<span class="sev sev-med">MED</span>'
+                    : '<span class="sev sev-low">LOW</span>';
+              return "<li>" + badge + escapeHtml(gateLabel(g)) + "</li>";
+            })
+            .join("");
+
+          const sev = overallSeverity(failed);
+          const sevHtml =
+            failed.length === 0
+              ? "<p>No open issues — highest severity <strong>none</strong>.</p>"
+              : "<p>Highest severity among failures: <strong>" +
+                escapeHtml(sev) +
+                "</strong> (HIGH = tests/commands, MEDIUM = coverage-style checks, LOW = file checks).</p>";
+
+          const steps = nextSteps(report);
+          const stepsHtml = steps.map((s) => "<li>" + escapeHtml(s) + "</li>").join("");
+
+          return (
+            "<h4>What was tested</h4><ul>" +
+            (testedLines.length ? testedLines.join("") : "<li class=\"meta\">No gates in report.</li>") +
+            "</ul>" +
+            "<h4>What passed</h4><ul>" +
+            (passedLines ? passedLines : "<li class=\"meta\">None</li>") +
+            "</ul>" +
+            "<h4>What failed</h4><ul>" +
+            (failedLines ? failedLines : "<li class=\"meta\">None</li>") +
+            "</ul>" +
+            "<h4>Severity</h4>" +
+            sevHtml +
+            "<h4>Suggested next steps</h4><ul>" +
+            (stepsHtml ? stepsHtml : "<li class=\"meta\">None — all gates passed.</li>") +
+            "</ul>"
+          );
+        }
+
+        function escapeHtml(s) {
+          return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+        }
+
+        function failedTestCount(g) {
+          const te = g.testEvidence;
+          if (!te || !te.failedTests) return 0;
+          return te.failedTests.length;
+        }
+
+        function renderTestEvidence(g) {
+          const te = g.testEvidence;
+          if (!te || !te.failedTests || !te.failedTests.length) return "";
+          let html =
+            '<p class="pre-label">Failed tests (' +
+            te.failedTests.length +
+            ")" +
+            (te.totalFailed != null ? " · totalFailed: " + te.totalFailed : "") +
+            "</p><table class=\"evidence\"><thead><tr><th>Test</th><th>File</th><th>Messages</th></tr></thead><tbody>";
+          for (const t of te.failedTests) {
+            html +=
+              "<tr><td>" +
+              escapeHtml(t.fullName || "") +
+              "</td><td>" +
+              escapeHtml(t.file || "") +
+              "</td><td>" +
+              escapeHtml((t.messages || []).join("\n")) +
+              "</td></tr>";
+          }
+          html += "</tbody></table>";
+          return html;
+        }
+
+        function renderGateBody(g) {
+          let html = "";
+          if (g.detail) {
+            html += '<div class="pre-label">Detail</div><div class="pre-block">' + escapeHtml(g.detail) + "</div>";
+          }
+          html += renderTestEvidence(g);
+          if (g.stdout) {
+            html += '<div class="pre-label">stdout</div><div class="pre-block">' + escapeHtml(g.stdout) + "</div>";
+          }
+          if (g.stderr) {
+            html += '<div class="pre-label">stderr</div><div class="pre-block">' + escapeHtml(g.stderr) + "</div>";
+          }
+          if (!html) html = '<p class="meta">(No detail output)</p>';
+          return html;
+        }
+
+        function setStatus(state, label) {
+          const el = $("status");
+          el.className = "badge " + (state === "pass" ? "pass" : state === "fail" ? "fail" : "pending");
+          el.textContent = label;
+        }
+
+        function showError(msg) {
+          const el = $("error");
+          if (!msg) {
+            el.style.display = "none";
+            el.textContent = "";
+            return;
+          }
+          el.style.display = "block";
+          el.textContent = msg;
+        }
+
+        function render(report, sourceLabel) {
+          showError("");
+          $("data-source").textContent = "Data: " + sourceLabel;
+
+          const gatesEl = $("gates");
+          gatesEl.innerHTML = "";
+          $("nl-summary").innerHTML = "";
+
+          if (!report || !report.gates) {
+            setStatus("pending", "No report");
+            $("overview").style.display = "none";
+            $("nl-summary").innerHTML = "<p class=\"meta\">No gates to display.</p>";
+            return;
+          }
+
+          $("overview").style.display = "block";
+          const passedN = report.gates.filter((g) => g.ok).length;
+          const failedN = report.gates.filter((g) => !g.ok).length;
+
+          $("overview-status").className = "badge " + (report.ok ? "pass" : "fail");
+          $("overview-status").textContent = report.ok ? "Pass" : "Fail";
+          $("stat-pass").textContent = String(passedN);
+          $("stat-fail").textContent = String(failedN);
+          $("stat-config").textContent = report.configPath || "—";
+          $("overview-time").textContent = report.createdAt
+            ? "Run at " + new Date(report.createdAt).toLocaleString()
+            : "";
+
+          setStatus(report.ok ? "pass" : "fail", report.ok ? "All gates passed" : "Some gates failed");
+          $("nl-summary").innerHTML = buildSummaryHtml(report);
+
+          for (const g of report.gates) {
+            const row = document.createElement("div");
+            row.className = "gate" + (g.ok ? "" : " gate-fail");
+
+            const head = document.createElement("div");
+            head.className = "gate-head";
+            const mark = document.createElement("span");
+            mark.className = "mark " + (g.ok ? "ok" : "bad");
+            mark.textContent = g.ok ? "✓" : "✗";
+            const title = document.createElement("div");
+            title.className = "gate-title";
+            title.textContent = gateLabel(g);
+            const typ = document.createElement("span");
+            typ.className = "gate-type";
+            typ.textContent = "[" + g.type + "]";
+            const ms = document.createElement("span");
+            ms.className = "gate-ms";
+            ms.textContent = g.durationMs + "ms";
+
+            head.appendChild(mark);
+            head.appendChild(title);
+            head.appendChild(typ);
+            const nFail = failedTestCount(g);
+            if (nFail > 0) {
+              const ec = document.createElement("span");
+              ec.className = "evidence-count";
+              ec.textContent = nFail + " failed test" + (nFail === 1 ? "" : "s");
+              head.appendChild(ec);
+            }
+            head.appendChild(ms);
+
+            const body = document.createElement("div");
+            body.className = "gate-body";
+            body.innerHTML = renderGateBody(g);
+
+            head.addEventListener("click", () => row.classList.toggle("open"));
+            if (!g.ok) row.classList.add("open");
+
+            row.appendChild(head);
+            row.appendChild(body);
+            gatesEl.appendChild(row);
+          }
+        }
+
+        async function fetchReport() {
+          let res = await fetch("/api/report", { cache: "no-store" }).catch(() => null);
+          if (res && res.ok) {
+            const j = await res.json();
+            return { report: j, source: "GET /api/report" };
+          }
+          res = await fetch("/whitebox-report.json", { cache: "no-store" }).catch(() => null);
+          if (res && res.ok) {
+            const j = await res.json();
+            return { report: j, source: "GET /whitebox-report.json" };
+          }
+          return { report: MOCK_REPORT, source: "embedded mock (start server for live data)" };
+        }
+
+        async function refresh() {
+          $("btn-refresh").disabled = true;
+          $("btn-run").disabled = true;
+          $("btn-retest").disabled = true;
+          setStatus("pending", "Loading…");
+          try {
+            const { report, source } = await fetchReport();
+            render(report, source);
+          } catch (e) {
+            showError(e instanceof Error ? e.message : String(e));
+            setStatus("pending", "Error");
+            render(MOCK_REPORT, "embedded mock (after error)");
+          }
+          $("btn-refresh").disabled = false;
+          $("btn-run").disabled = false;
+          $("btn-retest").disabled = false;
+        }
+
+        async function runVerify() {
+          $("btn-run").disabled = true;
+          $("btn-retest").disabled = true;
+          $("btn-refresh").disabled = true;
+          showError("");
+          setStatus("pending", "Running…");
+          try {
+            const r = await fetch("/api/run", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: "{}",
+            });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || "Run failed: HTTP " + r.status);
+            render(data, "POST /api/run (response)");
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            showError(msg + " — try Refresh, or run `npm run serve` from the repo root.");
+            setStatus("pending", "Error");
+            const fb = await fetchReport();
+            render(fb.report, fb.source + " (fallback)");
+          }
+          $("btn-run").disabled = false;
+          $("btn-retest").disabled = false;
+          $("btn-refresh").disabled = false;
+        }
+
+        $("btn-refresh").addEventListener("click", refresh);
+        $("btn-run").addEventListener("click", runVerify);
+        $("btn-retest").addEventListener("click", runVerify);
+
+        refresh();
+      })();
+    </script>
+  </body>
+</html>

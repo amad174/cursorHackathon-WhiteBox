@@ -12,7 +12,9 @@
     "test": "vitest run",
     "lint": "tsc --noEmit",
     "verify": "npm run build && node dist/cli.js verify --config whitebox.config.json",
-    "verify:example": "npm run build && node dist/cli.js verify --config examples/todo-app/whitebox.config.json"
+    "verify:example": "npm run build && node dist/cli.js verify --config examples/todo-app/whitebox.config.json",
+    "serve": "npm run build && node dist/cli.js serve",
+    "mcp": "npm run build && node dist/cli.js mcp"
   },
   "engines": {
     "node": ">=20"
@@ -23,7 +25,9 @@
     "vitest": "^3.1.1"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^13.1.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "zod": "^4.3.6"
   }
 }
