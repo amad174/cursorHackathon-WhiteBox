@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "gates": [
+    {
+      "id": "todo-tests",
+      "label": "Example Vitest suite",
+      "type": "command",
+      "run": "npm test"
+    }
+  ]
+}

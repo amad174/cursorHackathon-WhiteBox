@@ -1,0 +1,29 @@
+{
+  "name": "whitebox",
+  "version": "0.1.0",
+  "description": "Configurable quality gates with structured verification reports",
+  "type": "module",
+  "bin": {
+    "whitebox": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
+    "verify": "npm run build && node dist/cli.js verify --config whitebox.config.json",
+    "verify:example": "npm run build && node dist/cli.js verify --config examples/todo-app/whitebox.config.json"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.1"
+  },
+  "dependencies": {
+    "commander": "^13.1.0"
+  }
+}
