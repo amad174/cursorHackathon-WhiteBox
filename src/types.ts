@@ -11,6 +11,11 @@ export type CommandGate = GateBase & {
   cwd?: string;
   /** Max ms before kill (default 300_000) */
   timeoutMs?: number;
+  /**
+   * After the command, read this file (relative to gate cwd) and attach Vitest-style JSON
+   * evidence (Jest-compatible reporter output) to the report.
+   */
+  jsonReportPath?: string;
 };
 
 export type FileExistsGate = GateBase & {
@@ -33,6 +38,13 @@ export type Config = {
   gates: Gate[];
 };
 
+export type TestEvidenceVitest = {
+  framework: "vitest-json";
+  totalPassed?: number;
+  totalFailed?: number;
+  failedTests: { fullName: string; file: string; messages: string[] }[];
+};
+
 export type GateResult = {
   id: string;
   label?: string;
@@ -42,6 +54,8 @@ export type GateResult = {
   detail?: string;
   stdout?: string;
   stderr?: string;
+  /** Structured proof from jsonReportPath (e.g. which tests failed) */
+  testEvidence?: TestEvidenceVitest;
 };
 
 export type VerifyReport = {

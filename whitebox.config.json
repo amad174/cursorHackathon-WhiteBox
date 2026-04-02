@@ -14,11 +14,18 @@
       "run": "npx vitest run"
     },
     {
-      "id": "example-suite",
-      "label": "Example app test suite",
+      "id": "example-coverage",
+      "label": "Example app: tests + line-coverage floor + Vitest JSON evidence",
       "type": "command",
       "cwd": "examples/todo-app",
-      "run": "npm test"
+      "run": "npm run test:coverage && node ../../dist/cli.js coverage --file coverage/coverage-summary.json --min-lines 70",
+      "jsonReportPath": ".vitest-result.json"
+    },
+    {
+      "id": "export-review",
+      "label": "Exports are referenced in sibling tests (or get suggestions)",
+      "type": "command",
+      "run": "node dist/cli.js review --root examples/todo-app --fail"
     }
   ]
 }

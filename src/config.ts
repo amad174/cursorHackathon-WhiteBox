@@ -30,7 +30,11 @@ function parseGate(raw: unknown, index: number): Gate {
     if (timeoutMs !== undefined && typeof timeoutMs !== "number") {
       throw new Error(`gates[${index}].timeoutMs: expected number`);
     }
-    return { id, label, type: "command", run, cwd, timeoutMs };
+    const jsonReportPath = raw.jsonReportPath;
+    if (jsonReportPath !== undefined && typeof jsonReportPath !== "string") {
+      throw new Error(`gates[${index}].jsonReportPath: expected string`);
+    }
+    return { id, label, type: "command", run, cwd, timeoutMs, jsonReportPath };
   }
   if (type === "fileExists") {
     const p = raw.path;

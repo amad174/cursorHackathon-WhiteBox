@@ -1,5 +1,10 @@
 node_modules/
 dist/
 whitebox-report.json
+examples/todo-app/.vitest-result.json
+examples/todo-app/coverage/
 *.log
 .DS_Store
+.env
+.env.*
+!.env.example

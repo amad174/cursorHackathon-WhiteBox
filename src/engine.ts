@@ -1,7 +1,8 @@
 import { access, readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
-import type { Config, Gate, GateResult, VerifyReport } from "./types.js";
+import type { Config, Gate, GateResult, TestEvidenceVitest, VerifyReport } from "./types.js";
+import { parseVitestJsonReport } from "./vitest-json.js";
 
 const DEFAULT_TIMEOUT_MS = 300_000;
 
@@ -107,6 +108,24 @@ export async function runGate(
       : code === 0
         ? undefined
         : `Exit code ${code ?? "unknown"}`;
+
+  let testEvidence: TestEvidenceVitest | undefined;
+  if (gate.type === "command" && gate.jsonReportPath) {
+    const reportAbs = path.resolve(cwd, gate.jsonReportPath);
+    try {
+      const jsonText = await readFile(reportAbs, "utf8");
+      const parsed = parseVitestJsonReport(jsonText);
+      testEvidence = {
+        framework: "vitest-json",
+        totalPassed: parsed.totalPassed,
+        totalFailed: parsed.totalFailed,
+        failedTests: parsed.failedTests,
+      };
+    } catch {
+      /* no file or unreadable — omit evidence */
+    }
+  }
+
   return {
     ...base,
     ok,
@@ -114,6 +133,7 @@ export async function runGate(
     detail,
     stdout: stdout.trim() ? stdout.slice(-16_000) : undefined,
     stderr: stderr.trim() ? stderr.slice(-16_000) : undefined,
+    testEvidence,
   };
 }
 
