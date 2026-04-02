@@ -17,6 +17,8 @@ npm install
 npm run verify
 ```
 
+Optional AI: copy `.env.example` to `.env`, set `OPENAI_API_KEY`, then run `node dist/cli.js review --root examples/todo-app --ai` (never commit `.env`).
+
 ## Demo narrative (bad change → fail → fix)
 
 1. Open `examples/todo-app/src/sum.ts` and change the return to something wrong (e.g. `a - b`).
@@ -95,5 +97,5 @@ Exit code `0` only if every gate passes.
 ## Project layout
 
 - `src/` — verifier engine + CLI
-- `examples/todo-app/` — tiny app whose tests are invoked as a gate from the root config
+- `examples/todo-app/` — tiny sample (`sum`, `greet`) whose tests + coverage are checked from the root config
 - `whitebox.config.json` — root gates for this repo
